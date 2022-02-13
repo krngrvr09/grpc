@@ -1,6 +1,0 @@
-/root/grpc/examples/cpp/distsys/cmake/build/CMakeFiles/rebuild_cache.dir
-/root/grpc/examples/cpp/distsys/cmake/build/CMakeFiles/edit_cache.dir
-/root/grpc/examples/cpp/distsys/cmake/build/CMakeFiles/distsys_server.dir
-/root/grpc/examples/cpp/distsys/cmake/build/CMakeFiles/distsys_helper.dir
-/root/grpc/examples/cpp/distsys/cmake/build/CMakeFiles/distsys_client.dir
-/root/grpc/examples/cpp/distsys/cmake/build/CMakeFiles/ds_grpc_proto.dir

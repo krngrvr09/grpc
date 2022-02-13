@@ -30,6 +30,8 @@
 #include <grpcpp/client_context.h>
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
+#include<sstream>
+#include<cstdlib>
 #ifdef BAZEL_BUILD
 #include "examples/protos/distsys.grpc.pb.h"
 #else
@@ -53,6 +55,13 @@ std::string stringarg = "123";
 char *bytesarg = {0};
 */
 
+struct Node{
+	int32_t a;
+	int64_t b;
+	std::string c;
+	Node(int32_t av, int64_t bv, std::string cv) : a(av), b(bv), c(cv) {}
+};
+
 timespec diff(timespec start, timespec end)
 {
         timespec temp;
@@ -67,38 +76,53 @@ timespec diff(timespec start, timespec end)
 }
 
 
-Request makeRequestForGetString(){
+Request makeRequest(int sz){
 	int32_t intarg = 1;
 	int64_t longarg=2;
-	std::string stringarg = "123";
-	//char *bytesarg = {0};
+	std::string stringarg;
+	std::string charset="abcdefghijklmnopqrstuvwxyz";
+	stringarg.reserve(sz);
+	for(int i=0;i<sz;i++){
+		stringarg+=charset[rand()%26];
+	}
 	Request request;
 	
 	struct timespec start, end;
-        clock_gettime(CLOCK_MONOTONIC, &start);
+        //clock_gettime(CLOCK_MONOTONIC, &start);
 		request.set_intarg(intarg);
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        std::cout<<diff(start, end).tv_nsec<<std::endl;
+        //clock_gettime(CLOCK_MONOTONIC, &end);
+        //std::cout<<diff(start, end).tv_nsec<<std::endl;
 
 
-      	clock_gettime(CLOCK_MONOTONIC, &start);
-                request.set_intarg(intarg);
-        clock_gettime(CLOCK_MONOTONIC, &end);
-        std::cout<<diff(start, end).tv_nsec<<std::endl;
- 	clock_gettime(CLOCK_MONOTONIC, &start);
+      	//clock_gettime(CLOCK_MONOTONIC, &start);
+        //        request.set_intarg(intarg);
+        //clock_gettime(CLOCK_MONOTONIC, &end);
+        //std::cout<<diff(start, end).tv_nsec<<std::endl;
+ 	//clock_gettime(CLOCK_MONOTONIC, &start);
 	request.set_longarg(longarg);
-	clock_gettime(CLOCK_MONOTONIC, &end);
-	std::cout<<diff(start, end).tv_nsec<<std::endl;
+	//clock_gettime(CLOCK_MONOTONIC, &end);
+	//std::cout<<diff(start, end).tv_nsec<<std::endl;
 	
-	clock_gettime(CLOCK_MONOTONIC, &start);
+	//clock_gettime(CLOCK_MONOTONIC, &start);
 	request.set_stringarg(stringarg);
-	clock_gettime(CLOCK_MONOTONIC, &end);
-	std::cout<<diff(start, end).tv_nsec<<std::endl;
-	//request.set_bytesarg(bytesarg);
+	//clock_gettime(CLOCK_MONOTONIC, &end);
+	//std::cout<<diff(start, end).tv_nsec<<std::endl;
+	//Request::Object object;
+	//object.set_intarg(intarg);
+	//object.set_longarg(longarg);
+	//object.set_stringarg(stringarg);
+	//Node *n = new Node(intarg, longarg, stringarg);
+	request.mutable_bytesarg()->set_intarg(intarg);
+	request.mutable_bytesarg()->set_longarg(longarg);
+	request.mutable_bytesarg()->set_stringarg(stringarg);
+	//clock_gettime(CLOCK_MONOTONIC, &end);
+	//std::cout<<diff(start, end).tv_nsec<<std::endl;
+	//request.bytesarg.set_longarg(longarg);
+	//request.bytesarg.set_stringarg(stringarg);
 	return request;
 }
 
-Request makeRequest(){
+/*Request makeRequest(){
         int32_t intarg = 1;
         int64_t longarg=2;
         std::string stringarg = "123";
@@ -111,50 +135,79 @@ Request makeRequest(){
         //clock_gettime(CLOCK_MONOTONIC, &end);
         //std::cout<<diff(start, end).tv_nsec<<std::endl;
 
-        request.set_longarg(longarg);
-        request.set_stringarg(stringarg);
+        //request.set_longarg(longarg);
+        //request.set_stringarg(stringarg);
         //request.set_bytesarg(bytesarg);
         return request;
-}
+}*/
 
 class DistsysClient {
  public:
-  DistsysClient(std::shared_ptr<Channel> channel, const std::string& db)
+	 DistsysClient(std::shared_ptr<Channel> channel, const std::string& db)
       : stub_(Distsys::NewStub(channel)) {
 	      //commenting this out because we are not using it. Do we need the constructor then?
     //routeguide::ParseDb(db, &feature_list_);
   }
 
-  void GetString() {
+  void GetString(int sz) {
     Request request;
-    request = makeRequestForGetString();
-    Response response;
-    GetOneString(request, &response);
+    request = makeRequest(sz);
+    //Response response;
+    //ClientContext context;
+    
+    for(int i=0;i<10;i++){
+    	ClientContext context;
+	    Response response;
+	    struct timespec start, end;
+    	Status status;
+    	clock_gettime(CLOCK_MONOTONIC, &start);
+    	status = stub_->GetString(&context, request, &response);
+        //status = stub_->GetString(&context, request, &response);
+    	clock_gettime(CLOCK_MONOTONIC, &end);
+    	//std::cout<<diff(start, end).tv_nsec<<std::endl;
+    
+    	if(status.ok()){
+	    //std::cout<<"okay response"<<std::endl;
+    	}
+   	 else{
+	    std::cout<<status.error_code()<<": "<<status.error_message()<<std::endl;
+    	}
+    }
+    //GetOneString(request, &response);
   }
 
-  void GetStringStream() {
+  void GetStringStream(int sz) {
     ClientContext context;
 
-    Request request = makeRequest();
+    Request request = makeRequest(sz);
     Response response;
     std::unique_ptr<ClientReader<Response> > reader(
         stub_->GetStringStream(&context, request));
+   int incoming_sz;
+   std::string incoming_string; 
+        struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
     while (reader->Read(&response)) {
-      std::cout << "Found response string: " << response.response_message() << std::endl;
+      //std::cout << "Found response string: " << response.response_message().size()<< std::endl;
+      incoming_string = response.response_message();
+	    incoming_sz = incoming_string.size();
     }
     Status status = reader->Finish();
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        std::cout<<diff(start, end).tv_nsec<<std::endl;    
+	std::cout<<"incoming size: "<<incoming_sz<<std::endl;
     if (status.ok()) {
       std::cout << "GetStringStream rpc succeeded." << std::endl;
     } else {
-      std::cout << "GetStringStream rpc failed." << std::endl;
+      std::cout << "GetStringStream rpc failed. " << status.error_code()<<": "<<status.error_message()<<std::endl;
     }
   }
 
-  void SendStringStream() {
+  void SendStringStream(int sz) {
     ClientContext context;
     const int kPoints = 10;
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    Request request = makeRequest();
+    Request request = makeRequest(sz);
     std::default_random_engine generator(seed);
     //std::uniform_int_distribution<int> feature_distribution(
     //    0, feature_list_.size() - 1);
@@ -184,14 +237,14 @@ class DistsysClient {
     }
   }
 
-  void ExchangeStringStream() {
+  void ExchangeStringStream(int sz) {
     ClientContext context;
 
     std::shared_ptr<ClientReaderWriter<Request, Response> > stream(
         stub_->ExchangeStringStream(&context));
 
-    std::thread writer([stream]() {
-      std::vector<Request> requests{makeRequest(),makeRequest(), makeRequest(), makeRequest()
+    std::thread writer([stream, sz] {
+      std::vector<Request> requests{makeRequest(sz),makeRequest(sz), makeRequest(sz), makeRequest(sz)
 				   };
       int request_idx=0;
       for (const Request& request : requests) {
@@ -249,35 +302,47 @@ class DistsysClient {
 };
 
 int main(int argc, char** argv) {
-	std::cout<<"argc: "<<argc<<std::endl;
-  if(argc<2){
-	  std::cout<<"usage: ./distsys_client <1|2|3|4|all>"<<std::endl;
+	//std::cout<<"argc: "<<argc<<std::endl;
+  if(argc<3){
+	  std::cout<<"usage: ./distsys_client <1|2|3|4|all> <size>"<<std::endl;
 	  return 0;
 	// Expect only arg: --db_path=path/to/route_guide_db.json.
   }
   std::string db = "";//routeguide::GetDbFileContent(argc, argv);
+  grpc::ChannelArguments ch_args;
+  ch_args.SetMaxReceiveMessageSize(-1);
   DistsysClient guide(
-      grpc::CreateChannel("localhost:50051",
-                          grpc::InsecureChannelCredentials()),
+		  //10.136.0.3
+      grpc::CreateCustomChannel("0.0.0.0:50051",
+                          grpc::InsecureChannelCredentials(), ch_args),
       db);
 
   std::string option(argv[1]);
+        int sz;
+        std::string tmp_str(argv[2]);
+        std::stringstream ss(tmp_str);
+        ss>>sz;
+
   if(option=="1"||option=="all"){
-  	std::cout << "-------------- GetString --------------" << std::endl;
-  	guide.GetString();
+  	//std::cout << "-------------- GetString --------------" << std::endl;
+//  	int sz;
+//	std::string tmp_str(argv[2]);
+//	std::stringstream ss(tmp_str);
+//	ss>>sz;
+	  guide.GetString(sz);
   }
   if(option=="2"||option=="all"){  
 	std::cout << "-------------- GetStringStream --------------" << std::endl;
-  	guide.GetStringStream();
+  	guide.GetStringStream(sz);
   }
   if(option=="3"||option=="all"){
 	std::cout << "-------------- SendStringStream --------------" << std::endl;
-  	guide.SendStringStream();
+  	guide.SendStringStream(sz);
   }
   if(option=="4"||option=="all"){
 
   	std::cout << "-------------- ExchangeStringStream --------------" << std::endl;
-  	guide.ExchangeStringStream();
+  	guide.ExchangeStringStream(sz);
   }
   return 0;
 }

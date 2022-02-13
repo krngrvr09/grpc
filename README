@@ -1,0 +1,5 @@
+to compile, run the following commands:
+$ mkdir -p cmake/build
+$ cd cmake/build
+$ cmake -DCMAKE_PREFIX_PATH=$MY_INSTALL_DIR ../..
+

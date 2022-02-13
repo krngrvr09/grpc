@@ -1,2 +1,0 @@
-/usr/bin/ar qc libds_grpc_proto.a  CMakeFiles/ds_grpc_proto.dir/distsys.grpc.pb.cc.o CMakeFiles/ds_grpc_proto.dir/distsys.pb.cc.o
-/usr/bin/ranlib libds_grpc_proto.a

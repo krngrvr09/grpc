@@ -22,7 +22,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
-
+#include<cstdlib>
 #include "helper.h"
 
 #include <grpc/grpc.h>
@@ -48,19 +48,37 @@ using distsys::Response;
 using std::chrono::system_clock;
 using distsys::Distsys;
 
-
+timespec diff(timespec start, timespec end)
+{
+        timespec temp;
+        if ((end.tv_nsec-start.tv_nsec)<0) {
+                temp.tv_sec = end.tv_sec-start.tv_sec-1;
+                temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+        } else {
+                temp.tv_sec = end.tv_sec-start.tv_sec;
+                temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+        }
+        return temp;
+}
 class DistsysImpl final : public Distsys::Service {
  public:
-  explicit DistsysImpl(const std::string& db) {
+  //explicit DistsysImpl(const std::string& db) {
     
-  }
+  //}
 
   Status GetString(ServerContext* context, const Request* request,
                     Response* response) override {
     
-	std::cout<<"inside getstring"<<std::endl;
-	response->set_response_code(200);
+	//std::cout<<"inside getstring"<<std::endl;
+        struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+	Request::Object a=request->bytesarg();
+        clock_gettime(CLOCK_MONOTONIC, &end);
+	        std::cout<<diff(start, end).tv_nsec<<std::endl;
+	  response->set_response_code(200);
     response->set_response_message("ok");
+        //clock_gettime(CLOCK_MONOTONIC, &end);
+        //std::cout<<diff(start, end).tv_nsec<<std::endl;
     return Status::OK;
   }
 
@@ -119,7 +137,7 @@ class DistsysImpl final : public Distsys::Service {
 
 void RunServer(const std::string& db_path) {
   std::string server_address("0.0.0.0:50051");
-  DistsysImpl service(db_path);
+  DistsysImpl service;
 
   ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
