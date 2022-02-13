@@ -38,12 +38,12 @@ PROTOS_PATH = ../../protos
 
 vpath %.proto $(PROTOS_PATH)
 
-all: system-check route_guide_client route_guide_server
+all: system-check distsys_client distsys_server
 
-route_guide_client: route_guide.pb.o route_guide.grpc.pb.o route_guide_client.o helper.o
+distsys_client: distsys.pb.o distsys.grpc.pb.o distsys_client.o helper.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
-route_guide_server: route_guide.pb.o route_guide.grpc.pb.o route_guide_server.o helper.o
+distsys_server: distsys.pb.o distsys.grpc.pb.o distsys_server.o helper.o
 	$(CXX) $^ $(LDFLAGS) -o $@
 
 %.grpc.pb.cc: %.proto
@@ -53,7 +53,7 @@ route_guide_server: route_guide.pb.o route_guide.grpc.pb.o route_guide_server.o 
 	$(PROTOC) -I $(PROTOS_PATH) --cpp_out=. $<
 
 clean:
-	rm -f *.o *.pb.cc *.pb.h route_guide_client route_guide_server
+	rm -f *.o *.pb.cc *.pb.h distsys_client distsys_server
 
 
 # The following is to test your system and ensure a smoother experience.

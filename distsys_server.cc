@@ -43,137 +43,83 @@ using grpc::ServerReader;
 using grpc::ServerReaderWriter;
 using grpc::ServerWriter;
 using grpc::Status;
-using distsys::Feature;
-using distsys::Point;
-using distsys::Rectangle;
-using distsys::RouteGuide;
-using distsys::RouteNote;
-using distsys::RouteSummary;
 using distsys::Request;
 using distsys::Response;
 using std::chrono::system_clock;
+using distsys::Distsys;
 
-float ConvertToRadians(float num) { return num * 3.1415926 / 180; }
 
-// The formula is based on http://mathforum.org/library/drmath/view/51879.html
-float GetDistance(const Point& start, const Point& end) {
-  const float kCoordFactor = 10000000.0;
-  float lat_1 = start.latitude() / kCoordFactor;
-  float lat_2 = end.latitude() / kCoordFactor;
-  float lon_1 = start.longitude() / kCoordFactor;
-  float lon_2 = end.longitude() / kCoordFactor;
-  float lat_rad_1 = ConvertToRadians(lat_1);
-  float lat_rad_2 = ConvertToRadians(lat_2);
-  float delta_lat_rad = ConvertToRadians(lat_2 - lat_1);
-  float delta_lon_rad = ConvertToRadians(lon_2 - lon_1);
-
-  float a = pow(sin(delta_lat_rad / 2), 2) +
-            cos(lat_rad_1) * cos(lat_rad_2) * pow(sin(delta_lon_rad / 2), 2);
-  float c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  int R = 6371000;  // metres
-
-  return R * c;
-}
-
-std::string GetFeatureName(const Point& point,
-                           const std::vector<Feature>& feature_list) {
-  for (const Feature& f : feature_list) {
-    if (f.location().latitude() == point.latitude() &&
-        f.location().longitude() == point.longitude()) {
-      return f.name();
-    }
-  }
-  return "";
-}
-
-class RouteGuideImpl final : public RouteGuide::Service {
+class DistsysImpl final : public Distsys::Service {
  public:
-  explicit RouteGuideImpl(const std::string& db) {
-    routeguide::ParseDb(db, &feature_list_);
+  explicit DistsysImpl(const std::string& db) {
+    
   }
 
-  Status GetFeature(ServerContext* context, const Point* point,
-                    Feature* feature) override {
-    feature->set_name(GetFeatureName(*point, feature_list_));
-    feature->mutable_location()->CopyFrom(*point);
+  Status GetString(ServerContext* context, const Request* request,
+                    Response* response) override {
+    
+	std::cout<<"inside getstring"<<std::endl;
+	response->set_response_code(200);
+    response->set_response_message("ok");
     return Status::OK;
   }
 
-  Status ListFeatures(ServerContext* context,
-                      const routeguide::Rectangle* rectangle,
-                      ServerWriter<Feature>* writer) override {
-    auto lo = rectangle->lo();
-    auto hi = rectangle->hi();
-    long left = (std::min)(lo.longitude(), hi.longitude());
-    long right = (std::max)(lo.longitude(), hi.longitude());
-    long top = (std::max)(lo.latitude(), hi.latitude());
-    long bottom = (std::min)(lo.latitude(), hi.latitude());
-    for (const Feature& f : feature_list_) {
-      if (f.location().longitude() >= left &&
-          f.location().longitude() <= right &&
-          f.location().latitude() >= bottom && f.location().latitude() <= top) {
-        writer->Write(f);
-      }
+  Status GetStringStream(ServerContext* context,
+                      const Request* request,
+                      ServerWriter<Response>* writer) override {
+    Response response;
+    response.set_response_code(200);
+    response.set_response_message("ok");
+    for (int i=0;i<10;i++) {
+        writer->Write(response);
     }
     return Status::OK;
   }
 
-  Status RecordRoute(ServerContext* context, ServerReader<Point>* reader,
-                     RouteSummary* summary) override {
-    Point point;
-    int point_count = 0;
-    int feature_count = 0;
-    float distance = 0.0;
-    Point previous;
-
+  Status SendStringStream(ServerContext* context, ServerReader<Request>* reader,
+                     Response* response) override {
+    Request request;
+    int test_int=0;
     system_clock::time_point start_time = system_clock::now();
-    while (reader->Read(&point)) {
-      point_count++;
-      if (!GetFeatureName(point, feature_list_).empty()) {
-        feature_count++;
+    while (reader->Read(&request)) {
+      test_int+=request.intarg();
       }
-      if (point_count != 1) {
-        distance += GetDistance(previous, point);
-      }
-      previous = point;
-    }
     system_clock::time_point end_time = system_clock::now();
-    summary->set_point_count(point_count);
-    summary->set_feature_count(feature_count);
-    summary->set_distance(static_cast<long>(distance));
+    response->set_response_code(200);
+    response->set_response_message("ok");
     auto secs =
         std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
-    summary->set_elapsed_time(secs.count());
 
     return Status::OK;
   }
 
-  Status RouteChat(ServerContext* context,
-                   ServerReaderWriter<RouteNote, RouteNote>* stream) override {
-    RouteNote note;
-    while (stream->Read(&note)) {
+  Status ExchangeStringStream(ServerContext* context,
+                   ServerReaderWriter<Response, Request>* stream) override {
+    Request request;
+    //int test_int=0;
+    while (stream->Read(&request)) {
       std::unique_lock<std::mutex> lock(mu_);
-      for (const RouteNote& n : received_notes_) {
-        if (n.location().latitude() == note.location().latitude() &&
-            n.location().longitude() == note.location().longitude()) {
-          stream->Write(n);
+      for (const Request& r : received_requests_) {
+        Response response;
+	response.set_response_code(200);
+	response.set_response_message("ok");
+	stream->Write(response);
         }
       }
-      received_notes_.push_back(note);
-    }
+      received_requests_.push_back(request);
+    
 
     return Status::OK;
   }
 
  private:
-  std::vector<Feature> feature_list_;
   std::mutex mu_;
-  std::vector<RouteNote> received_notes_;
+  std::vector<Request> received_requests_;
 };
 
 void RunServer(const std::string& db_path) {
   std::string server_address("0.0.0.0:50051");
-  RouteGuideImpl service(db_path);
+  DistsysImpl service(db_path);
 
   ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
@@ -185,7 +131,7 @@ void RunServer(const std::string& db_path) {
 
 int main(int argc, char** argv) {
   // Expect only arg: --db_path=path/to/route_guide_db.json.
-  std::string db = routeguide::GetDbFileContent(argc, argv);
+  std::string db = "";//distsys::GetDbFileContent(argc, argv);
   RunServer(db);
 
   return 0;

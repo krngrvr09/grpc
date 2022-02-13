@@ -75,7 +75,7 @@ class Parser {
 
   bool Finished() { return current_ >= db_.size(); }
 
-  bool TryParseOne(Feature* feature) {
+  /*bool TryParseOne(Feature* feature) {
     if (failed_ || Finished() || !Match("{")) {
       return SetFailedAndReturnFalse();
     }
@@ -108,6 +108,7 @@ class Parser {
     }
     return true;
   }
+  */
 
  private:
   bool SetFailedAndReturnFalse() {
@@ -140,7 +141,7 @@ class Parser {
   const std::string name_ = "\"name\":";
 };
 
-void ParseDb(const std::string& db, std::vector<Feature>* feature_list) {
+/*void ParseDb(const std::string& db, std::vector<Feature>* feature_list) {
   feature_list->clear();
   std::string db_content(db);
   db_content.erase(
@@ -160,5 +161,6 @@ void ParseDb(const std::string& db, std::vector<Feature>* feature_list) {
   std::cout << "DB parsed, loaded " << feature_list->size() << " features."
             << std::endl;
 }
+*/
 
 }  // namespace distsys

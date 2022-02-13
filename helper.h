@@ -23,11 +23,9 @@
 #include <vector>
 
 namespace distsys {
-class Feature;
 
 std::string GetDbFileContent(int argc, char** argv);
 
-void ParseDb(const std::string& db, std::vector<Feature>* feature_list);
 
 }  // namespace distsys
 

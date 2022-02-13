@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdistsys_helper.a  CMakeFiles/distsys_helper.dir/helper.cc.o
+/usr/bin/ranlib libdistsys_helper.a

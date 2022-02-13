@@ -19,7 +19,7 @@
 
 cmake_minimum_required(VERSION 3.5.1)
 
-project(DistSys C CXX)
+project(Distsys C CXX)
 
 include(../cmake/common.cmake)
 

@@ -35,55 +35,86 @@
 #else
 #include "distsys.grpc.pb.h"
 #endif
-
+#include<unistd.h>
+#include<time.h>
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::ClientReaderWriter;
 using grpc::ClientWriter;
 using grpc::Status;
-using distsys::Feature;
-using distsys::Point;
-using distsys::Rectangle;
-using distsys::RouteGuide;
-using distsys::RouteNote;
-using distsys::RouteSummary;
-using distSys::Request;
+using distsys::Request;
 using distsys::Response;
-
-Point MakePoint(long latitude, long longitude) {
-  Point p;
-  p.set_latitude(latitude);
-  p.set_longitude(longitude);
-  return p;
-}
-
+using distsys::Distsys;
+/*
 int intarg = 1;
 long longarg=2;
-string stringarg = "123";
+std::string stringarg = "123";
 char *bytesarg = {0};
-Request makeRequest(){
+*/
+
+timespec diff(timespec start, timespec end)
+{
+        timespec temp;
+        if ((end.tv_nsec-start.tv_nsec)<0) {
+                temp.tv_sec = end.tv_sec-start.tv_sec-1;
+                temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+        } else {
+                temp.tv_sec = end.tv_sec-start.tv_sec;
+                temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+        }
+        return temp;
+}
+
+
+Request makeRequestForGetString(){
+	int32_t intarg = 1;
+	int64_t longarg=2;
+	std::string stringarg = "123";
+	//char *bytesarg = {0};
 	Request request;
-	request.set_intarg(intarg);
+	
+	struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
+		request.set_intarg(intarg);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        std::cout<<diff(start, end).tv_nsec<<std::endl;
+
+
+      	clock_gettime(CLOCK_MONOTONIC, &start);
+                request.set_intarg(intarg);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        std::cout<<diff(start, end).tv_nsec<<std::endl;
+ 	clock_gettime(CLOCK_MONOTONIC, &start);
 	request.set_longarg(longarg);
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	std::cout<<diff(start, end).tv_nsec<<std::endl;
+	
+	clock_gettime(CLOCK_MONOTONIC, &start);
 	request.set_stringarg(stringarg);
-	request.set_bytesarg(bytesarg);
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	std::cout<<diff(start, end).tv_nsec<<std::endl;
+	//request.set_bytesarg(bytesarg);
 	return request;
 }
 
-Feature MakeFeature(const std::string& name, long latitude, long longitude) {
-  Feature f;
-  f.set_name(name);
-  f.mutable_location()->CopyFrom(MakePoint(latitude, longitude));
-  return f;
-}
+Request makeRequest(){
+        int32_t intarg = 1;
+        int64_t longarg=2;
+        std::string stringarg = "123";
+        //char *bytesarg = {0};
+        Request request;
 
-RouteNote MakeRouteNote(const std::string& message, long latitude,
-                        long longitude) {
-  RouteNote n;
-  n.set_message(message);
-  n.mutable_location()->CopyFrom(MakePoint(latitude, longitude));
-  return n;
+        //struct timespec start, end;
+        //clock_gettime(CLOCK_MONOTONIC, &start);
+                request.set_intarg(intarg);
+        //clock_gettime(CLOCK_MONOTONIC, &end);
+        //std::cout<<diff(start, end).tv_nsec<<std::endl;
+
+        request.set_longarg(longarg);
+        request.set_stringarg(stringarg);
+        //request.set_bytesarg(bytesarg);
+        return request;
 }
 
 class DistsysClient {
@@ -95,65 +126,48 @@ class DistsysClient {
   }
 
   void GetString() {
-    Point point;
-    Feature feature;
-    point = MakePoint(409146138, -746188906);
-    //GetOneFeature(point, &feature);
-    //point = MakePoint(0, 0);
     Request request;
-    request = makeRequest();
+    request = makeRequestForGetString();
     Response response;
     GetOneString(request, &response);
   }
 
-  void ListStrings() {
-    distsys::Rectangle rect;
-    Feature feature;
-    std::string response_string;
+  void GetStringStream() {
     ClientContext context;
 
-    rect.mutable_lo()->set_latitude(400000000);
-    rect.mutable_lo()->set_longitude(-750000000);
-    rect.mutable_hi()->set_latitude(420000000);
-    rect.mutable_hi()->set_longitude(-730000000);
-    std::cout << "Looking for features between 40, -75 and 42, -73"
-              << std::endl;
     Request request = makeRequest();
     Response response;
     std::unique_ptr<ClientReader<Response> > reader(
-        stub_->ListStrings(&context, request));
+        stub_->GetStringStream(&context, request));
     while (reader->Read(&response)) {
       std::cout << "Found response string: " << response.response_message() << std::endl;
     }
     Status status = reader->Finish();
     if (status.ok()) {
-      std::cout << "ListStrings rpc succeeded." << std::endl;
+      std::cout << "GetStringStream rpc succeeded." << std::endl;
     } else {
-      std::cout << "ListStrings rpc failed." << std::endl;
+      std::cout << "GetStringStream rpc failed." << std::endl;
     }
   }
 
-  void RecordRouteString() {
-    Point point;
-    RouteSummary stats;
-    std::string response_string;
+  void SendStringStream() {
     ClientContext context;
     const int kPoints = 10;
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-
+    Request request = makeRequest();
     std::default_random_engine generator(seed);
     //std::uniform_int_distribution<int> feature_distribution(
     //    0, feature_list_.size() - 1);
     std::uniform_int_distribution<int> delay_distribution(500, 1500);
     Response response;
     std::unique_ptr<ClientWriter<Request> > writer(
-        stub_->RecordRouteString(&context, &response));
+        stub_->SendStringStream(&context, &response));
     for (int i = 0; i < kPoints; i++) {
       //const Feature& f = feature_list_[feature_distribution(generator)];
       //std::cout << "Visiting point " << f.location().latitude() / kCoordFactor_
       //          << ", " << f.location().longitude() / kCoordFactor_
       //          << std::endl;
-      if (!writer->Write(f.location())) {
+      if (!writer->Write(request)) {
         // Broken stream.
         break;
       }
@@ -166,15 +180,15 @@ class DistsysClient {
       std::cout << "Finished trip with " << response.response_message() << " string as response\n"
                 << std::endl;
     } else {
-      std::cout << "RecordRoute rpc failed." << std::endl;
+      std::cout << "SendStringStream rpc failed." << std::endl;
     }
   }
 
-  void RouteChatString() {
+  void ExchangeStringStream() {
     ClientContext context;
 
     std::shared_ptr<ClientReaderWriter<Request, Response> > stream(
-        stub_->RouteChatString(&context));
+        stub_->ExchangeStringStream(&context));
 
     std::thread writer([stream]() {
       std::vector<Request> requests{makeRequest(),makeRequest(), makeRequest(), makeRequest()
@@ -182,7 +196,7 @@ class DistsysClient {
       int request_idx=0;
       for (const Request& request : requests) {
         std::cout << "Sending request " << request_idx << std::endl;
-        stream->Write(note);
+        stream->Write(request);
 	request_idx++;
       }
       stream->WritesDone();
@@ -195,16 +209,20 @@ class DistsysClient {
     writer.join();
     Status status = stream->Finish();
     if (!status.ok()) {
-      std::cout << "RouteChat rpc failed." << std::endl;
+      std::cout << "ExchangeStringStream rpc failed." << std::endl;
     }
   }
 
  private:
-  bool GetOneString(const Request& request, Response* reponse) {
+  bool GetOneString(const Request& request, Response* response) {
+	  //std::cout<<"Inside GetOneString"<<std::endl;
     ClientContext context;
     Status status = stub_->GetString(&context, request, response);
     if (!status.ok()) {
       std::cout << "GetFeature rpc failed." << std::endl;
+      std::cout<<status.error_message()<<std::endl;
+      std::cout<<status.error_details()<<std::endl;
+      std::cout<<status.error_code()<<std::endl;
       return false;
     }
     /*
@@ -225,27 +243,41 @@ class DistsysClient {
     return true;
   }
 
-  const float kCoordFactor_ = 10000000.0;
+  //const float kCoordFactor_ = 10000000.0;
   std::unique_ptr<Distsys::Stub> stub_;
   //std::vector<Feature> feature_list_;
 };
 
 int main(int argc, char** argv) {
-  // Expect only arg: --db_path=path/to/route_guide_db.json.
+	std::cout<<"argc: "<<argc<<std::endl;
+  if(argc<2){
+	  std::cout<<"usage: ./distsys_client <1|2|3|4|all>"<<std::endl;
+	  return 0;
+	// Expect only arg: --db_path=path/to/route_guide_db.json.
+  }
   std::string db = "";//routeguide::GetDbFileContent(argc, argv);
-  RouteGuideClient guide(
+  DistsysClient guide(
       grpc::CreateChannel("localhost:50051",
                           grpc::InsecureChannelCredentials()),
       db);
 
-  std::cout << "-------------- GetString --------------" << std::endl;
-  guide.GetString();
-  std::cout << "-------------- ListStrings --------------" << std::endl;
-  guide.ListStrings();
-  std::cout << "-------------- RecordRouteString --------------" << std::endl;
-  guide.RecordRouteString();
-  std::cout << "-------------- RouteChatString --------------" << std::endl;
-  guide.RouteChatString();
+  std::string option(argv[1]);
+  if(option=="1"||option=="all"){
+  	std::cout << "-------------- GetString --------------" << std::endl;
+  	guide.GetString();
+  }
+  if(option=="2"||option=="all"){  
+	std::cout << "-------------- GetStringStream --------------" << std::endl;
+  	guide.GetStringStream();
+  }
+  if(option=="3"||option=="all"){
+	std::cout << "-------------- SendStringStream --------------" << std::endl;
+  	guide.SendStringStream();
+  }
+  if(option=="4"||option=="all"){
 
+  	std::cout << "-------------- ExchangeStringStream --------------" << std::endl;
+  	guide.ExchangeStringStream();
+  }
   return 0;
 }
