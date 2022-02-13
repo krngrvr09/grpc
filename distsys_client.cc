@@ -88,35 +88,28 @@ Request makeRequest(int sz){
 	Request request;
 	
 	struct timespec start, end;
-        //clock_gettime(CLOCK_MONOTONIC, &start);
+        clock_gettime(CLOCK_MONOTONIC, &start);
 		request.set_intarg(intarg);
-        //clock_gettime(CLOCK_MONOTONIC, &end);
-        //std::cout<<diff(start, end).tv_nsec<<std::endl;
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        std::cout<<"time to marshall int: "<<diff(start, end).tv_nsec<<std::endl;
 
 
-      	//clock_gettime(CLOCK_MONOTONIC, &start);
-        //        request.set_intarg(intarg);
-        //clock_gettime(CLOCK_MONOTONIC, &end);
-        //std::cout<<diff(start, end).tv_nsec<<std::endl;
- 	//clock_gettime(CLOCK_MONOTONIC, &start);
+ 	clock_gettime(CLOCK_MONOTONIC, &start);
 	request.set_longarg(longarg);
-	//clock_gettime(CLOCK_MONOTONIC, &end);
-	//std::cout<<diff(start, end).tv_nsec<<std::endl;
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	std::cout<<"time to marshall long: "<<diff(start, end).tv_nsec<<std::endl;
 	
-	//clock_gettime(CLOCK_MONOTONIC, &start);
+	clock_gettime(CLOCK_MONOTONIC, &start);
 	request.set_stringarg(stringarg);
-	//clock_gettime(CLOCK_MONOTONIC, &end);
-	//std::cout<<diff(start, end).tv_nsec<<std::endl;
-	//Request::Object object;
-	//object.set_intarg(intarg);
-	//object.set_longarg(longarg);
-	//object.set_stringarg(stringarg);
-	//Node *n = new Node(intarg, longarg, stringarg);
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	std::cout<<"time to marshall string: "<<diff(start, end).tv_nsec<<std::endl;
+
+	clock_gettime(CLOCK_MONOTONIC, &start);
 	request.mutable_bytesarg()->set_intarg(intarg);
 	request.mutable_bytesarg()->set_longarg(longarg);
 	request.mutable_bytesarg()->set_stringarg(stringarg);
-	//clock_gettime(CLOCK_MONOTONIC, &end);
-	//std::cout<<diff(start, end).tv_nsec<<std::endl;
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	std::cout<<"time to marshall object: "<<diff(start, end).tv_nsec<<std::endl;
 	//request.bytesarg.set_longarg(longarg);
 	//request.bytesarg.set_stringarg(stringarg);
 	return request;
@@ -164,7 +157,7 @@ class DistsysClient {
     	status = stub_->GetString(&context, request, &response);
         //status = stub_->GetString(&context, request, &response);
     	clock_gettime(CLOCK_MONOTONIC, &end);
-    	//std::cout<<diff(start, end).tv_nsec<<std::endl;
+    	std::cout<<"rtt for client: "<<diff(start, end).tv_nsec<<std::endl;
     
     	if(status.ok()){
 	    //std::cout<<"okay response"<<std::endl;
@@ -194,8 +187,8 @@ class DistsysClient {
     }
     Status status = reader->Finish();
         clock_gettime(CLOCK_MONOTONIC, &end);
-        std::cout<<diff(start, end).tv_nsec<<std::endl;    
-	std::cout<<"incoming size: "<<incoming_sz<<std::endl;
+        std::cout<<"time to receive stream of size: "<<incoming_sz.size()*100<<" bytes: "<<diff(start, end).tv_nsec<<std::endl;    
+	//std::cout<<"incoming size: "<<incoming_sz<<std::endl;
     if (status.ok()) {
       std::cout << "GetStringStream rpc succeeded." << std::endl;
     } else {

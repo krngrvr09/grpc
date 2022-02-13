@@ -3,3 +3,10 @@ $ mkdir -p cmake/build
 $ cd cmake/build
 $ cmake -DCMAKE_PREFIX_PATH=$MY_INSTALL_DIR ../..
 
+All rubrics can be done using the same code and different command line arguments for the client.
+
+./distsys_client takes 2 arguments:
+1. Type of program one would like to run: (1) single request, single response. (2) single request, stream response, (3) stream request, single response, (4) stream request, stream response.
+2. size of the string to pack in the message.
+
+
